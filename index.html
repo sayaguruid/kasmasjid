@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplikasi Kas Masjid</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
   <style>
-    /* ... (SEMUA KODE CSS ANDA ... persis seperti yang Anda berikan, tidak perlu diubah) ... */
+    /* ... (Semua CSS Anda dari sebelumnya, tidak perlu diubah) ... */
     :root {
       --bg-main: #fcfcfc;
       --bg-card: #ffffff;
@@ -18,6 +20,7 @@
       --color-green: #008000;
       --color-red: #d93025;
     }
+
     body {
       padding: 0;
       background-color: var(--bg-main);
@@ -25,118 +28,414 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
       color: var(--text-primary);
     }
-    /* ... (SISA CSS ANDA) ... */
+
+    .container {
+      max-width: 700px;
+    }
+
+    /* --- 2. KOMPONEN OVERRIDE --- */
+
+    /* Navbar */
+    .navbar {
+      background-color: var(--bg-card) !important;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .navbar-brand {
+      color: var(--text-primary) !important;
+    }
+
+    /* Tombol Utama (di-override) */
+    .btn-dark {
+      background-color: var(--btn-primary-bg);
+      border-color: var(--btn-primary-bg);
+      transition: background-color 0.2s ease;
+    }
+    .btn-dark:hover {
+      background-color: var(--btn-primary-hover);
+      border-color: var(--btn-primary-hover);
+    }
+
+    /* Tabs */
+    .nav-tabs {
+      border-bottom: 1px solid var(--border-color);
+    }
+    .nav-tabs .nav-link {
+      color: var(--text-secondary);
+      border: none;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-tabs .nav-link.active,
+    .nav-tabs .nav-link:hover {
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--text-primary);
+      background: none;
+    }
+
+    /* Dashboard */
+    .dashboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .dashboard-item .name {
+      font-weight: 500;
+    }
+    .dashboard-item .balance {
+      font-weight: 600;
+      color: var(--text-primary); /* Bukan biru lagi */
+    }
+
+    /* Riwayat */
+    #historyContent {
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: none;
+    }
+    .history-card {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+    }
+    .history-card:last-child { border-bottom: none; }
+    .history-card-keterangan {
+      font-size: 1.1em;
+      font-weight: 500;
+      padding-right: 80px; /* space untuk tombol */
+    }
+    .history-card-actions {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
+    .history-card-date {
+      font-size: 0.9em;
+      color: var(--text-secondary);
+    }
+    .history-card-amount.pemasukan {
+      color: var(--color-green); /* Hijau lebih gelap */
+      font-weight: 600;
+    }
+    .history-card-amount.pengeluaran {
+      color: var(--color-red); /* Merah lebih gelap */
+      font-weight: 600;
+    }
+
+    /* Modal */
+    .modal-content {
+      border: none;
+      border-radius: 8px;
+    }
+
+    /* --- 3. SKELETON LOADER (SMOOTH LOADING) --- */
+    .skeleton-loader {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .skeleton-item, .skeleton-card {
+      background-color: #eee;
+      border-radius: 4px;
+    }
+
+    /* Skeleton untuk Dashboard */
+    .skeleton-dashboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .skeleton-dashboard-item .name {
+      width: 40%;
+      height: 20px;
+    }
+    .skeleton-dashboard-item .balance {
+      width: 30%;
+      height: 20px;
+    }
+
+    /* Skeleton untuk Riwayat */
+    .skeleton-history-card {
+      padding: 16px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .skeleton-history-card .keterangan {
+      width: 70%;
+      height: 24px;
+      margin-bottom: 12px;
+    }
+    .skeleton-history-card .footer {
+      display: flex;
+      justify-content: space-between;
+    }
+    .skeleton-history-card .date {
+      width: 30%;
+      height: 20px;
+    }
+    .skeleton-history-card .amount {
+      width: 40%;
+      height: 20px;
+    }
+    
+    /* Pagination Style */
+    .pagination .page-item .page-link {
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    .pagination .page-item.active .page-link {
+        background-color: var(--btn-primary-bg);
+        border-color: var(--btn-primary-bg);
+        color: white;
+    }
     .pagination .page-item.disabled .page-link {
         color: #ccc;
         border-color: var(--border-color);
     }
+
   </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-light bg-white border-bottom fixed-top">
+  <nav class="navbar navbar-light bg-white border-bottom fixed-top">
     <div class="container-fluid" style="max-width: 720px; margin: auto;">
+
       <div>
         <span class="navbar-brand mb-0 h1">Aplikasi Kas Masjid</span>
       </div>
+
       <div class="d-flex">
         <button class="btn btn-dark" type="button" data-bs-toggle="modal" data-bs-target="#inputModal" title="Input Transaksi Baru" id="plusButtonNav" style="display: none;">
           <i class="bi bi-plus-lg" style="font-size: 1.5rem;"></i>
         </button>
+
         <button class="btn btn-dark ms-2" type="button" data-bs-toggle="modal" data-bs-target="#loginModal" id="loginButtonNav">
           <i class="bi bi-person-fill-lock"></i> Login Admin
         </button>
+
         <button class="btn btn-outline-danger ms-2" type="button" id="logoutButtonNav" style="display: none;">
           <i class="bi bi-box-arrow-right"></i> Logout
         </button>
       </div>
+
     </div>
   </nav>
+
   <div class="container bg-white p-3 p-md-4 rounded shadow-sm">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-tab-pane" type="button" role="tab" aria-controls="dashboard-tab-pane" aria-selected="true">Dashboard</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-tab-pane" type="button" role="tab" aria-controls="history-tab-pane" aria-selected="false" disabled title="Login sebagai admin untuk melihat riwayat">Riwayat</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+
+      <div class="tab-pane fade show active" id="dashboard-tab-pane" role="tabpanel" aria-labelledby="dashboard-tab" tabindex="0">
+        <div class="p-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Ringkasan Saldo</h5>
+            <button class="btn btn-sm btn-outline-secondary" id="refreshDashboardBtn" onclick="loadDashboard()">
+              Muat Ulang
+            </button>
+          </div>
+          <div id="dashboardContent"></div>
+        </div>
       </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+      <div class="tab-pane fade" id="history-tab-pane" role="tabpanel" aria-labelledby="history-tab" tabindex="0">
+        <div class="p-3">
+          <h5 class="mb-3">Lihat Riwayat Transaksi</h5>
+          <div class="row g-2">
+            <div class="col-sm-8">
+              <label for="historyCategory" class="form-label">Pilih Kategori</label>
+              <select class="form-select" id="historyCategory">
+                <option value="" disabled selected>Login untuk memuat...</option>
+              </select>
+            </div>
+            <div class="col-sm-4 d-flex align-items-end">
+              <button class="btn btn-dark w-100" id="loadHistoryBtn" onclick="loadHistory()">Tampilkan</button>
+            </div>
+          </div>
+          <div id="historyMessage"></div>
+          
+          <div id="historyContent" class="mt-3">
+            <div class="alert alert-info">Silakan login sebagai admin untuk melihat riwayat transaksi.</div>
+          </div>
+          
+          <div id="paginationControls" class="mt-3 d-flex justify-content-center"></div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="loginModalLabel">Login Admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+            <p class="text-muted">Masukkan password admin untuk mengakses fitur tambah, edit, hapus, dan lihat riwayat.</p>
+            <div class="mb-3">
+              <label for="loginPassword" class="form-label">Password Admin</label>
+              <input type="password" class="form-control" id="loginPassword" required>
+            </div>
+            <div id="loginErrorMessage" class="text-danger mb-3" style="display:none;"></div>
+            <button type="submit" class="btn btn-dark w-100" id="loginButton">
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="inputModal" tabindex="-1" aria-labelledby="inputModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="inputModalLabel">Input Transaksi Baru</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="transactionForm" onsubmit="handleFormSubmit(event)">
+            <div id="statusMessage"></div>
+            <div class="mb-3">
+              <label for="tanggal" class="form-label">Tanggal</label>
+              <input type="date" class="form-control" id="tanggal" required>
+            </div>
+            <div class="mb-3">
+              <label for="jenis" class="form-label">Jenis Transaksi</label>
+              <select class="form-select" id="jenis" onchange="toggleKeteranganField()">
+                <option value="Pemasukan">Pemasukan (Uang Masuk)</option>
+                <option value="Pengeluaran">Pengeluaran (Uang Keluar)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="kategori" class="form-label">Kategori / Pos Dana</label>
+              <select class="form-select" id="kategori" required onchange="toggleKeteranganField()">
+                <option value="" disabled selected>Login untuk memuat...</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="jumlah" class="form-label">Jumlah (Rp)</label>
+              <input type="number" class="form-control" id="jumlah" placeholder="Contoh: 50000" min="1" step="any" required>
+            </div>
+            <div class="mb-3" id="keteranganWrapper" style="display:none;">
+              <label for="keterangan" class="form-label">Keterangan</label>
+              <textarea class="form-control" id="keterangan" rows="3" placeholder="Contoh: Beli semen..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-dark w-100 p-2" id="submitButton">
+              Simpan Transaksi
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Edit Transaksi</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="editModalLoader" class="loader" style="display:none;">
+            <div class="spinner-border text-primary" role="status"></div>
+          </div>
+          <form id="editForm" onsubmit="handleEditFormSubmit(event)">
+            <input type="hidden" id="editTrxId">
+            <div class="mb-3">
+              <label for="editTanggal" class="form-label">Tanggal</label>
+              <input type="date" class="form-control" id="editTanggal" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Kategori & Jenis</label>
+              <input type="text" class="form-control" id="editInfo" disabled readonly>
+            </div>
+            <div class="mb-3">
+              <label for="editJumlah" class="form-label">Jumlah (Rp)</label>
+              <input type="number" class="form-control" id="editJumlah" min="1" step="any" required>
+            </div>
+            <div class="mb-3" id="editKeteranganWrapper">
+              <label for="editKeterangan" class="form-label">Keterangan</label>
+              <textarea class="form-control" id="editKeterangan" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-dark w-100" id="editSubmitButton">
+              Simpan Perubahan
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
   <script>
-    // ==========================================================
-    // PERUBAHAN BESAR PADA JAVASCRIPT
-    // ==========================================================
-    
-    // **PENTING**: Ganti dengan URL Web App Anda dari Langkah 3
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUyy3cFoPCwcwHTJXVgOpPq6TkkMUxWYtZcEsQst1kuSL9V5xVa63EGkWm16sFC3UJkQ/exec";
-    
-    // --- 0. FUNGSI HELPER BARU (PENGGANTI google.script.run) ---
-    /**
-     * Fungsi ini menggantikan google.script.run
-     * Fungsi ini memanggil API GAS Anda menggunakan fetch()
-     */
-    function callGasApi(action, payload = {}) {
-      // Fungsi ini mengembalikan "Promise", mirip dengan .withSuccessHandler
-      return fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        mode: 'cors', // Wajib ada untuk komunikasi lintas domain
-        headers: {
-          // Trik agar GAS tidak memerlukan pre-flight 'OPTIONS'
-          'Content-Type': 'text/plain;charset=utf-8', 
-        },
-        body: JSON.stringify({ action: action, payload: payload })
-      })
-      .then(response => {
-        if (!response.ok) {
-          // Tangani error jaringan
-          throw new Error(`Network response error: ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then(result => {
-        // Tangani error yang dikirim dari logika GAS (cth: password salah)
-        if (result.status === 'error' || result.error) {
-          throw new Error(result.message || result.error || 'Unknown script error');
-        }
-        // Jika sukses, kembalikan datanya
-        return result;
-      });
-    }
-    
     // --- 1. GLOBAL STATE & VARIABLES ---
-    // (Tidak berubah)
     let isAdmin = false;
     let adminPassword = null;
     let allCategories = {};
     let editModalInstance = null;
     let inputModalInstance = null;
     let loginModalInstance = null;
-    const ITEMS_PER_PAGE = 20;
+
+    // **BARU**: State untuk Pagination Riwayat
+    const ITEMS_PER_PAGE = 20; // Tentukan jumlah item per halaman
     let historyCurrentPage = 1;
     let historyTotalPages = 1;
-    let historyCurrentCategory = null;
+    let historyCurrentCategory = null; // Untuk menyimpan kategori yang sedang dilihat
 
     // --- 2. INITIALIZATION ---
-    // (Tidak berubah)
     document.addEventListener("DOMContentLoaded", function() {
+      // ... (Inisialisasi modal tidak berubah) ...
       editModalInstance = new bootstrap.Modal(document.getElementById('editModal'));
       inputModalInstance = new bootstrap.Modal(document.getElementById('inputModal'));
       loginModalInstance = new bootstrap.Modal(document.getElementById('loginModal'));
+
       document.getElementById('logoutButtonNav').addEventListener('click', handleLogout);
       checkLoginStatus();
+
       const dashboardTab = document.getElementById('dashboard-tab');
       if (dashboardTab) {
         loadDashboard();
         dashboardTab.addEventListener('shown.bs.tab', loadDashboard);
       }
+      
+      // **BARU**: Listener untuk tombol Tampilkan Riwayat
+      // Menggunakan ini agar kita bisa panggil loadHistory(1)
       document.getElementById('loadHistoryBtn').addEventListener('click', () => loadHistory(1));
     });
 
     // --- 3. AUTHENTICATION & SESSION ---
-    // (Semua 'google.script.run' diganti 'callGasApi')
-
+    // ... (Semua fungsi otentikasi (checkLoginStatus, handleLoginSubmit, onLoginSuccess, onLoginFailure, onLoginCheckFailure, handleLogout) tidak berubah) ...
     function checkLoginStatus() {
       const storedPassword = localStorage.getItem("admin_password");
       if (storedPassword) {
         toggleButtonSpinner('loginButtonNav', true, '...');
-        // **PERUBAHAN**
-        callGasApi('verifyPassword', { password: storedPassword })
-          .then(onLoginSuccess)
-          .catch(onLoginCheckFailure);
+        google.script.run
+          .withSuccessHandler(onLoginSuccess)
+          .withFailureHandler(onLoginCheckFailure)
+          .verifyPassword(storedPassword);
       } else {
         updateUI("guest");
       }
@@ -147,154 +446,577 @@
       const errorMessage = document.getElementById('loginErrorMessage');
       toggleButtonSpinner('loginButton', true, 'Login');
       errorMessage.style.display = 'none';
-      // **PERUBAHAN**
-      callGasApi('verifyPassword', { password: passwordInput })
-        .then(response => onLoginSuccess(response, passwordInput))
-        .catch(onLoginFailure);
+      google.script.run
+        .withSuccessHandler(response => onLoginSuccess(response, passwordInput))
+        .withFailureHandler(onLoginFailure)
+        .verifyPassword(passwordInput);
     }
-    // Fungsi (onLoginSuccess, onLoginFailure, onLoginCheckFailure, handleLogout) tidak berubah
+    function onLoginSuccess(response, passwordInput) {
+      const password = passwordInput || localStorage.getItem("admin_password");
+      if (response.status === "success") {
+        isAdmin = true;
+        adminPassword = password;
+        localStorage.setItem("admin_password", password);
+        updateUI("admin");
+        loginModalInstance.hide();
+        document.getElementById('loginForm').reset();
+        loadAdminData();
+      } else {
+        onLoginFailure(new Error(response.message));
+      }
+      toggleButtonSpinner('loginButton', false, 'Login');
+      toggleButtonSpinner('loginButtonNav', false, 'Login Admin');
+    }
+    function onLoginFailure(error) {
+      const errorMessage = document.getElementById('loginErrorMessage');
+      errorMessage.textContent = error.message || "Password salah.";
+      errorMessage.style.display = 'block';
+      toggleButtonSpinner('loginButton', false, 'Login');
+    }
+    function onLoginCheckFailure(error) {
+      handleLogout();
+    }
+/**
+     * Menangani proses logout
+     */
+    function handleLogout() {
+      localStorage.removeItem("admin_password");
+      isAdmin = false;
+      adminPassword = null;
+      
+      // **PERUBAHAN**: Memanggil updateUI saja sudah cukup.
+      updateUI("guest"); 
+      
+      // **DIHAPUS**: Baris 'location.reload();' dihapus
+      // location.reload(); // Ini tidak diperlukan lagi
+    }
 
     // --- 4. DATA LOADING & HANDLING ---
-    // (Semua 'google.script.run' diganti 'callGasApi')
-    
-    // Fungsi (loadAdminData) tidak berubah
+    // ... (loadAdminData, loadDashboard, loadCategories tidak berubah) ...
+    function loadAdminData() {
+      setDefaultDate();
+      loadCategories();
+      toggleKeteranganField();
+    }
     function loadDashboard() {
       const contentDiv = document.getElementById('dashboardContent');
       if (!contentDiv) return;
       contentDiv.innerHTML = getDashboardSkeleton();
       document.getElementById('refreshDashboardBtn').disabled = true;
-      // **PERUBAHAN**
-      callGasApi('getDashboardData', {})
-        .then(renderDashboard)
-        .catch(renderDashboardError);
+      google.script.run
+        .withSuccessHandler(renderDashboard)
+        .withFailureHandler(renderDashboardError)
+        .getDashboardData();
     }
     function loadCategories() {
       if (!isAdmin) return;
-      // **PERUBAHAN**
-      callGasApi('getCategories', { password: adminPassword })
-        .then(populateCategories)
-        .catch(showError);
+      google.script.run
+        .withSuccessHandler(populateCategories)
+        .withFailureHandler(showError)
+        .getCategories(adminPassword);
     }
-    function loadHistory(page = 1) {
+
+    /**
+     * (ADMIN) Memuat riwayat transaksi - **DIPERBARUI**
+     */
+function loadHistory(page = 1) {
       if (!isAdmin) return;
+
       const selectedValue = document.getElementById('historyCategory').value;
       if (!selectedValue) {
         showMessage('Silakan pilih kategori terlebih dahulu.', 'warning', 'historyMessage');
         return;
       }
+      
       const [kategoriKey, sheetName] = selectedValue.split('::');
+      
       if (historyCurrentCategory && historyCurrentCategory.sheetName !== sheetName) {
         page = 1;
       }
+      
       historyCurrentPage = page;
       historyCurrentCategory = { kategoriKey, sheetName };
+
       const contentDiv = document.getElementById('historyContent');
       toggleButtonSpinner('loadHistoryBtn', true, 'Tampilkan');
       if (contentDiv) contentDiv.innerHTML = getHistorySkeleton();
       document.getElementById('historyMessage').innerHTML = "";
-      document.getElementById('paginationControls').innerHTML = "";
-      // **PERUBAHAN**
-      callGasApi('getHistoryData', { 
-          sheetName: sheetName, 
-          page: historyCurrentPage, 
-          itemsPerPage: ITEMS_PER_PAGE, 
-          password: adminPassword 
-        })
-        .then(renderHistory)
-        .catch(renderHistoryError);
+      document.getElementById('paginationControls').innerHTML = ""; 
+
+      // **MENGIRIM INFO HALAMAN KE SERVER**
+      google.script.run
+        .withSuccessHandler(renderHistory) 
+        .withFailureHandler(renderHistoryError)
+        .getHistoryData(sheetName, historyCurrentPage, ITEMS_PER_PAGE, adminPassword);
     }
 
-    // --- 5. EVENT HANDLERS (Form Submissions, Clicks) ---
-    // (Semua 'google.script.run' diganti 'callGasApi')
+    /**
+     * (ADMIN) Merender data riwayat transaksi ke HTML - **SUDAH DENGAN PAGINATION**
+     */
 
+    // --- 5. EVENT HANDLERS (Form Submissions, Clicks) ---
+    // ... (handleFormSubmit, handleEditFormSubmit, showEditModal, askDelete, performDelete tidak berubah) ...
     function handleFormSubmit(event) {
       event.preventDefault();
       if (!isAdmin) return;
       toggleButtonSpinner('submitButton', true, 'Simpan Transaksi');
-      const formData = { /* ... (tidak berubah) ... */
+      const formData = {
         tanggal: document.getElementById('tanggal').value,
         jenis: document.getElementById('jenis').value,
         kategoriKey: document.getElementById('kategori').value,
         jumlah: document.getElementById('jumlah').value,
         keterangan_input: document.getElementById('keterangan').value
       };
-      // **PERUBAHAN**
-      callGasApi('addNewTransaction', { formData: formData, password: adminPassword })
-        .then(onSuccess)
-        .catch(onError);
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onError)
+        .addNewTransaction(formData, adminPassword);
     }
     function handleEditFormSubmit(event) {
       event.preventDefault();
       if (!isAdmin) return;
       toggleButtonSpinner('editSubmitButton', true, 'Simpan Perubahan');
-      const formData = { /* ... (tidak berubah) ... */
+      const formData = {
         trxId: document.getElementById('editTrxId').value,
         tanggal: document.getElementById('editTanggal').value,
         jumlah: document.getElementById('editJumlah').value,
         keterangan: document.getElementById('editKeterangan').value
       };
-      // **PERUBAHAN**
-      callGasApi('updateTransaction', { formData: formData, password: adminPassword })
-        .then(onHistoryActionSuccess)
-        .catch(onEditError);
+      google.script.run
+        .withSuccessHandler(onHistoryActionSuccess)
+        .withFailureHandler(onEditError)
+        .updateTransaction(formData, adminPassword);
     }
     function showEditModal(trxId) {
       if (!isAdmin) return;
       editModalInstance.show();
       document.getElementById('editModalLoader').style.display = 'block';
       document.getElementById('editForm').style.display = 'none';
-      // **PERUBAHAN**
-      callGasApi('getTransactionForEdit', { trxId: trxId, password: adminPassword })
-        .then(populateEditModal)
-        .catch(onEditError);
+      google.script.run
+        .withSuccessHandler(populateEditModal)
+        .withFailureHandler(onEditError)
+        .getTransactionForEdit(trxId, adminPassword);
     }
-    // Fungsi (askDelete) tidak berubah
+    function askDelete(trxId, kategoriKey, sheetName) {
+      if (!isAdmin) return;
+      if (confirm(`Anda yakin ingin menghapus transaksi ini?\n\nID: ${trxId}\nKategori: ${sheetName}\n\nTINDAKAN INI TIDAK BISA DIBATALKAN.`)) {
+        performDelete(trxId, kategoriKey, sheetName);
+      }
+    }
     function performDelete(trxId, kategoriKey, sheetName) {
       if (!isAdmin) return;
       document.getElementById('historyContent').innerHTML = getHistorySkeleton();
-      // **PERUBAHAN**
-      callGasApi('deleteTransaction', { 
-          trxId: trxId, 
-          kategoriKey: kategoriKey, 
-          sheetName: sheetName, 
-          password: adminPassword 
-        })
-        .then(onHistoryActionSuccess)
-        .catch(renderHistoryError);
+      google.script.run
+        .withSuccessHandler(onHistoryActionSuccess)
+        .withFailureHandler(renderHistoryError)
+        .deleteTransaction(trxId, kategoriKey, sheetName, adminPassword);
     }
 
+
     // --- 6. UI RENDERING & DOM MANIPULATION ---
-    // (Semua fungsi di bagian ini TIDAK BERUBAH SAMA SEKALI)
-    function updateUI(role) { /* ... (sama seperti sebelumnya) ... */ }
-    function renderDashboard(data) { /* ... (sama seperti sebelumnya) ... */ }
-    function renderDashboardError(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function populateCategories(categories) { /* ... (sama seperti sebelumnya) ... */ }
-    function renderHistory(response) { /* ... (sama seperti sebelumnya) ... */ }
-    function renderHistoryError(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function renderPaginationControls(currentPage, totalPages) { /* ... (sama seperti sebelumnya) ... */ }
-    function populateEditModal(response) { /* ... (sama seperti sebelumnya) ... */ }
-    function toggleKeteranganField() { /* ... (sama seperti sebelumnya) ... */ }
-    function setDefaultDate() { /* ... (sama seperti sebelumnya) ... */ }
+    // ... (updateUI, renderDashboard, renderDashboardError, populateCategories tidak berubah) ...
+    function updateUI(role) {
+      const loginBtn = document.getElementById('loginButtonNav');
+      const logoutBtn = document.getElementById('logoutButtonNav');
+      const plusBtn = document.getElementById('plusButtonNav');
+      const historyTabBtn = document.getElementById('history-tab');
+      const historyContent = document.getElementById('historyContent');
+
+      if (role === "admin") {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'block';
+        plusBtn.style.display = 'block';
+        historyTabBtn.disabled = false;
+        historyTabBtn.removeAttribute('title');
+        historyContent.innerHTML = '';
+        toggleButtonSpinner('loginButtonNav', false, '<i class="bi bi-person-fill-lock"></i> Login Admin');
+      } else {
+        loginBtn.style.display = 'block';
+        logoutBtn.style.display = 'none';
+        plusBtn.style.display = 'none';
+        historyTabBtn.disabled = true;
+        historyTabBtn.setAttribute('title', 'Login sebagai admin untuk melihat riwayat');
+        if (historyTabBtn.classList.contains('active')) {
+          bootstrap.Tab.getOrCreateInstance(document.getElementById('dashboard-tab')).show();
+        }
+        historyContent.innerHTML = '<div class="alert alert-info">Silakan login sebagai admin untuk melihat riwayat transaksi.</div>';
+        toggleButtonSpinner('loginButtonNav', false, '<i class="bi bi-person-fill-lock"></i> Login Admin');
+      }
+    }
+    function renderDashboard(data) {
+      document.getElementById('refreshDashboardBtn').disabled = false;
+      const contentDiv = document.getElementById('dashboardContent');
+      if (!data || Object.keys(data).length === 0) {
+        contentDiv.innerHTML = `<div class="alert alert-info">Belum ada data saldo.</div>`;
+        return;
+      }
+      let html = '<div class="list-group list-group-flush">';
+      let totalSaldo = 0;
+      const specialOrder = ["Kas Masjid", "Sodaqoh Harian Kelompok"];
+      const keys = Object.keys(data);
+      const sortedKeys = keys.sort((a, b) => {
+        const aIndex = specialOrder.indexOf(a);
+        const bIndex = specialOrder.indexOf(b);
+        if (aIndex > -1 && bIndex > -1) { return aIndex - bIndex; }
+        if (aIndex > -1) { return -1; }
+        if (bIndex > -1) { return 1; }
+        return a.localeCompare(b);
+      });
+      for (const sheetName of sortedKeys) {
+        const balance = data[sheetName];
+        totalSaldo += balance;
+        html += `
+          <div class="list-group-item dashboard-item">
+            <span class="name">${sheetName}</span>
+            <span class="balance">${formatCurrency(balance)}</span>
+          </div>
+        `;
+      }
+      html += `
+          <div class="list-group-item dashboard-item" style="background-color: #f8f9fa;">
+            <strong class="name">TOTAL GABUNGAN</strong>
+            <strong class="balance" style="color: var(--color-green);">${formatCurrency(totalSaldo)}</strong>
+          </div>
+        `;
+      html += '</div>';
+      contentDiv.innerHTML = html;
+    }
+    function renderDashboardError(error) {
+      document.getElementById('refreshDashboardBtn').disabled = false;
+      document.getElementById('dashboardContent').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+    }
+    function populateCategories(categories) {
+      if (!isAdmin) return;
+      allCategories = categories;
+      const selectForm = document.getElementById('kategori');
+      const selectHistory = document.getElementById('historyCategory');
+      if (!selectForm || !selectHistory) return;
+      selectForm.innerHTML = '<option value="" disabled selected>-- Pilih Kategori --</option>';
+      selectHistory.innerHTML = '<option value="" disabled selected>-- Pilih Kategori --</option>';
+      for (const key in categories) {
+        if (key !== 'LOG') {
+          const optionForm = document.createElement('option');
+          optionForm.value = key;
+          optionForm.textContent = categories[key];
+          selectForm.appendChild(optionForm);
+        }
+        const optionHistory = document.createElement('option');
+        optionHistory.value = `${key}::${categories[key]}`;
+        optionHistory.textContent = categories[key];
+        selectHistory.appendChild(optionHistory);
+      }
+    }
     
+    function renderHistory(response) {
+      toggleButtonSpinner('loadHistoryBtn', false, 'Tampilkan');
+      if (!isAdmin) return;
+
+      // **MENERIMA DATA PAGINASI DARI SERVER**
+      const { headers, data, page, totalPages } = response;
+      historyTotalPages = totalPages; 
+
+      const contentDiv = document.getElementById('historyContent');
+      if (!contentDiv) return;
+      if (response.error) {
+        renderHistoryError(new Error(response.error));
+        return;
+      }
+      if (!data || data.length === 0) {
+        contentDiv.innerHTML = `<div class="alert alert-info mt-3">Tidak ada data transaksi di kategori ini.</div>`;
+        document.getElementById('paginationControls').innerHTML = "";
+        return;
+      }
+
+      const { kategoriKey, sheetName } = historyCurrentCategory; 
+      let listHtml = ``;
+      // Data yang diterima di sini (data) sudah diurutkan (terbaru di atas)
+      // dan sudah dipaginasi (hanya 20 item) oleh server.
+      data.forEach(row => {
+        const trxId = row[0];
+        const tanggal = row[1];
+        // ... (sisa kode render card) ...
+        const keterangan = row[2];
+        const pemasukanStr = row[3];
+        const pengeluaranStr = row[4];
+        let amountStr = '';
+        let amountClass = '';
+        if (pemasukanStr !== 'Rp 0' && pemasukanStr !== '') {
+          amountStr = `+${pemasukanStr}`;
+          amountClass = 'pemasukan';
+        } else {
+          amountStr = `-${pengeluaranStr}`;
+          amountClass = 'pengeluaran';
+        }
+        listHtml += `
+          <div class="history-card">
+            <div class="history-card-header">
+              <div class="history-card-keterangan">${keterangan}</div>
+              <div class="history-card-actions">
+                <button class="btn btn-outline-secondary btn-sm" onclick="showEditModal('${trxId}')" title="Edit Transaksi">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="askDelete('${trxId}', '${kategoriKey}', '${sheetName}')" title="Hapus Transaksi">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="history-card-footer">
+              <div class="history-card-date">${tanggal}</div>
+              <div class="history-card-amount ${amountClass}">${amountStr}</div>
+            </div>
+          </div>
+        `;
+      });
+      contentDiv.innerHTML = listHtml;
+      
+      // **MEMBUAT TOMBOL-TOMBOL HALAMAN**
+      renderPaginationControls(page, totalPages);
+    }
+
+    function renderHistoryError(error) {
+      toggleButtonSpinner('loadHistoryBtn', false, 'Tampilkan');
+      const contentDiv = document.getElementById('historyContent');
+      if (contentDiv) contentDiv.innerHTML = `<div class="alert alert-danger mt-3">${error.message}</div>`;
+      document.getElementById('paginationControls').innerHTML = ""; // Kosongkan pagination
+
+      if (error.message.includes("Otorisasi Gagal")) {
+        handleLogout();
+      }
+    }
+    
+    /**
+     * **FUNGSI BARU**: Merender tombol pagination
+     */
+    function renderPaginationControls(currentPage, totalPages) {
+        const paginationEl = document.getElementById('paginationControls');
+        if (!paginationEl || totalPages <= 1) {
+            paginationEl.innerHTML = ""; // Tidak perlu pagination jika hanya 1 halaman
+            return;
+        }
+
+        let paginationHtml = '<nav><ul class="pagination">';
+
+        // Tombol "Previous"
+        paginationHtml += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="event.preventDefault(); ${currentPage > 1 ? `loadHistory(${currentPage - 1})` : ''}">Previous</a>
+            </li>
+        `;
+
+        // Logika nomor halaman
+        const pageWindow = 2; 
+        let start = Math.max(1, currentPage - pageWindow);
+        let end = Math.min(totalPages, currentPage + pageWindow);
+
+        if (start > 1) {
+            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); loadHistory(1)">1</a></li>`;
+            if (start > 2) {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        for (let i = start; i <= end; i++) {
+            paginationHtml += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="event.preventDefault(); ${i !== currentPage ? `loadHistory(${i})` : ''}">${i}</a>
+                </li>
+            `;
+        }
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); loadHistory(${totalPages})">${totalPages}</a></li>`;
+        }
+
+        // Tombol "Next"
+        paginationHtml += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="event.preventDefault(); ${currentPage < totalPages ? `loadHistory(${currentPage + 1})` : ''}">Next</a>
+            </li>
+        `;
+
+        paginationHtml += '</ul></nav>';
+        paginationEl.innerHTML = paginationHtml;
+    }
+    // ... (populateEditModal, toggleKeteranganField, setDefaultDate tidak berubah) ...
+    function populateEditModal(response) {
+      if (response.status === 'error' || response.error) {
+        onEditError(new Error(response.message || response.error));
+        return;
+      }
+      const { data } = response;
+      const localISODate = new Date(data.tanggal).toISOString().slice(0, 10);
+      const jumlah = (data.jenis === 'Pemasukan') ? data.pemasukan : data.pengeluaran;
+      document.getElementById('editTrxId').value = data.trxId;
+      document.getElementById('editTanggal').value = localISODate;
+      document.getElementById('editInfo').value = `${data.kategori} (${data.jenis})`;
+      document.getElementById('editJumlah').value = jumlah;
+      const ketWrapper = document.getElementById('editKeteranganWrapper');
+      const ketInput = document.getElementById('editKeterangan');
+      if (data.jenis === 'Pengeluaran' || (data.jenis === 'Pemasukan' && data.kategori === 'Kas Masjid')) {
+        ketWrapper.style.display = 'block';
+        ketInput.value = data.keterangan;
+      } else {
+        ketWrapper.style.display = 'none';
+        ketInput.value = '';
+      }
+      document.getElementById('editModalLoader').style.display = 'none';
+      document.getElementById('editForm').style.display = 'block';
+    }
+    function toggleKeteranganField() {
+      if (!isAdmin) return;
+      const jenis = document.getElementById('jenis').value;
+      const kategoriKey = document.getElementById('kategori').value;
+      const keteranganWrapper = document.getElementById('keteranganWrapper');
+      const keteranganInput = document.getElementById('keterangan');
+      const keteranganLabel = document.querySelector('#keteranganWrapper label');
+      if (!keteranganWrapper || !keteranganInput || !keteranganLabel) return;
+      if (jenis === 'Pengeluaran') {
+        keteranganWrapper.style.display = 'block';
+        keteranganInput.required = true;
+        keteranganLabel.textContent = "Keterangan (Wajib untuk Pengeluaran)";
+      } else if (jenis === 'Pemasukan' && kategoriKey === 'KAS') {
+        keteranganWrapper.style.display = 'block';
+        keteranganInput.required = true;
+        keteranganLabel.textContent = "Keterangan (Wajib untuk Pemasukan Kas Masjid)";
+      } else {
+        keteranganWrapper.style.display = 'none';
+        keteranganInput.required = false;
+      }
+    }
+    function setDefaultDate() {
+      if (!isAdmin) return;
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const localISODate = now.toISOString().slice(0, 10);
+      const tanggalInput = document.getElementById('tanggal');
+      if (tanggalInput) tanggalInput.value = localISODate;
+    }
+
+
     // --- 7. SERVER RESPONSE HANDLERS (Callbacks) ---
-    // (Semua fungsi di bagian ini TIDAK BERUBAH SAMA SEKALI)
-    function onSuccess(response) { /* ... (sama seperti sebelumnya) ... */ }
-    function onError(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function onHistoryActionSuccess(response) { /* ... (sama seperti sebelumnya) ... */ }
-    function onEditError(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function onLoginSuccess(response, passwordInput) { /* ... (sama seperti sebelumnya) ... */ }
-    function onLoginFailure(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function onLoginCheckFailure(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function handleLogout() { /* ... (sama seperti sebelumnya) ... */ }
-    
+    // ... (onSuccess, onError tidak berubah) ...
+    function onSuccess(response) {
+      toggleButtonSpinner('submitButton', false, 'Simpan Transaksi');
+      if (response.status === "success") {
+        inputModalInstance.hide();
+        document.getElementById('transactionForm').reset();
+        setDefaultDate();
+        toggleKeteranganField();
+        showMessage(response.message, 'success', 'historyMessage');
+        loadDashboard();
+        if (isAdmin && document.getElementById('history-tab').classList.contains('active')) {
+          // **DIPERBARUI**: Muat ulang halaman saat ini atau halaman 1
+          loadHistory(historyCurrentCategory ? historyCurrentPage : 1);
+        }
+      } else {
+        onError(new Error(response.message));
+      }
+    }
+    function onError(error) {
+      toggleButtonSpinner('submitButton', false, 'Simpan Transaksi');
+      showMessage(error.message, 'danger', 'statusMessage');
+    }
+
+    /**
+     * Callback sukses setelah edit atau hapus - **DIPERBARUI**
+     */
+    function onHistoryActionSuccess(response) {
+      if (response.status === 'success') {
+        editModalInstance.hide();
+        showMessage(response.message, 'success', 'historyMessage');
+        // **DIPERBARUI**: Muat ulang halaman saat ini
+        loadHistory(historyCurrentPage); 
+        loadDashboard(); // Public
+      } else {
+        showMessage(response.message, 'danger', 'historyMessage');
+      }
+      toggleButtonSpinner('editSubmitButton', false, 'Simpan Perubahan');
+    }
+
+    // ... (onEditError tidak berubah) ...
+    function onEditError(error) {
+      editModalInstance.hide();
+      showMessage(error.message, 'danger', 'historyMessage');
+      toggleButtonSpinner('editSubmitButton', false, 'Simpan Perubahan');
+      if (error.message.includes("Otorisasi Gagal")) {
+        handleLogout();
+      }
+    }
+
     // --- 8. UTILITY/HELPER FUNCTIONS ---
-    // (Semua fungsi di bagian ini TIDAK BERUBAH SAMA SEKALI)
-    function getDashboardSkeleton() { /* ... (sama seperti sebelumnya) ... */ }
-    function getHistorySkeleton() { /* ... (sama seperti sebelumnya) ... */ }
-    function showError(error) { /* ... (sama seperti sebelumnya) ... */ }
-    function showMessage(message, type, elementId) { /* ... (sama seperti sebelumnya) ... */ }
-    function toggleButtonSpinner(buttonId, showSpinner, buttonText = "Simpan") { /* ... (sama seperti sebelumnya) ... */ }
-    function formatCurrency(number) { /* ... (sama seperti sebelumnya) ... */ }
+    // ... (getDashboardSkeleton, getHistorySkeleton, showError, showMessage, toggleButtonSpinner, formatCurrency tidak berubah) ...
+    function getDashboardSkeleton() {
+      let html = '<div class="skeleton-loader">';
+      for (let i = 0; i < 4; i++) {
+        html += `
+          <div class="skeleton-dashboard-item">
+            <div class="skeleton-item name"></div>
+            <div class="skeleton-item balance"></div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      return html;
+    }
+    function getHistorySkeleton() {
+      let html = '<div class="skeleton-loader">';
+      for (let i = 0; i < 5; i++) {
+        html += `
+          <div class="skeleton-history-card">
+            <div class="skeleton-item keterangan"></div>
+            <div class="footer">
+              <div class="skeleton-item date"></div>
+              <div class="skeleton-item amount"></div>
+            </div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      return html;
+    }
+    function showError(error) {
+      showMessage(`Terjadi kesalahan: ${error.message}`, 'danger', 'historyMessage');
+    }
+    function showMessage(message, type, elementId) {
+      const statusEl = document.getElementById(elementId);
+      if (statusEl) {
+        statusEl.innerHTML = `<div class="alert alert-${type} mt-3" role="alert">${message}</div>`;
+        setTimeout(() => {
+          if (statusEl.innerHTML.includes(message)) {
+             statusEl.innerHTML = '';
+          }
+        }, 5000);
+      }
+    }
+    function toggleButtonSpinner(buttonId, showSpinner, buttonText = "Simpan") {
+      const button = document.getElementById(buttonId);
+      if (!button) return;
+      const originalHtml = button.innerHTML;
+      if (!button.dataset.originalHtml && !showSpinner) {} else if (!button.dataset.originalHtml) {
+         button.dataset.originalHtml = originalHtml;
+      }
+      button.disabled = showSpinner;
+      if (showSpinner) {
+        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memuat...`;
+      } else {
+        if (buttonText === "Login" || buttonText === "Tampilkan" || buttonText === "Simpan Transaksi" || buttonText === "Simpan Perubahan") {
+           button.innerHTML = buttonText;
+        } else {
+           button.innerHTML = button.dataset.originalHtml || buttonText;
+        }
+        delete button.dataset.originalHtml;
+      }
+    }
+    function formatCurrency(number) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(number);
+    }
   </script>
 
 </body>
