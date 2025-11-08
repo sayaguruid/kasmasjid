@@ -390,136 +390,219 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-  <script>
-    // --- 1. GLOBAL STATE & VARIABLES ---
+<script>
+    // --- 1. GLOBAL STATE & KONFIGURASI API ---
+    
+    // !! GANTI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT ANDA !!
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUyy3cFoPCwcwHTJXVgOpPq6TkkMUxWYtZcEsQst1kuSL9V5xVa63EGkWm16sFC3UJkQ/exec";
+    
     let isAdmin = false;
-    let adminPassword = null;
+    let adminPassword = null; // Akan disimpan di localStorage
     let allCategories = {};
     let editModalInstance = null;
     let inputModalInstance = null;
     let loginModalInstance = null;
 
-    // **BARU**: State untuk Pagination Riwayat
-    const ITEMS_PER_PAGE = 20; // Tentukan jumlah item per halaman
+    const ITEMS_PER_PAGE = 20;
     let historyCurrentPage = 1;
     let historyTotalPages = 1;
-    let historyCurrentCategory = null; // Untuk menyimpan kategori yang sedang dilihat
+    let historyCurrentCategory = null;
+
+    // --- [BARU] HELPER UNTUK MEMANGGIL API GAS ---
+
+    /**
+     * Memanggil API GAS (Metode GET, untuk data publik)
+     */
+    async function callGasGet(action) {
+      const url = `${GAS_WEB_APP_URL}?action=${action}`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.status === 'error') {
+          throw new Error(result.message);
+        }
+        return result.data; // Mengembalikan data jika sukses
+      } catch (error) {
+        console.error(`Error fetching GET ${action}:`, error);
+        throw error; // Melempar error agar bisa ditangkap oleh .catch()
+      }
+    }
+
+    /**
+     * Memanggil API GAS (Metode POST, untuk data admin)
+     * 'payload' adalah data spesifik untuk aksi tsb (cth: formData)
+     */
+    async function callGasPost(action, payload = {}) {
+      const postBody = {
+        action: action,
+        password: adminPassword, // Password admin (dari localStorage)
+        payload: payload // Data spesifik (cth: formData, trxId, dll)
+      };
+
+      try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          mode: 'cors', // Diperlukan untuk cross-origin
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8', // GAS doPost menerima text/plain
+          },
+          body: JSON.stringify(postBody),
+          redirect: 'follow'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        
+        // 'result' adalah objek utuh, cth: {status: "success", message: "..."}
+        // atau {status: "success", data: {...}}
+        return result; 
+
+      } catch (error) {
+        console.error(`Error fetching POST ${action}:`, error);
+        throw error; // Melempar error agar bisa ditangkap oleh .catch()
+      }
+    }
 
     // --- 2. INITIALIZATION ---
     document.addEventListener("DOMContentLoaded", function() {
-      // ... (Inisialisasi modal tidak berubah) ...
       editModalInstance = new bootstrap.Modal(document.getElementById('editModal'));
       inputModalInstance = new bootstrap.Modal(document.getElementById('inputModal'));
       loginModalInstance = new bootstrap.Modal(document.getElementById('loginModal'));
 
       document.getElementById('logoutButtonNav').addEventListener('click', handleLogout);
-      checkLoginStatus();
+      checkLoginStatus(); // Memeriksa login dari localStorage
 
       const dashboardTab = document.getElementById('dashboard-tab');
       if (dashboardTab) {
-        loadDashboard();
+        loadDashboard(); // Muat dashboard publik saat awal
         dashboardTab.addEventListener('shown.bs.tab', loadDashboard);
       }
       
-      // **BARU**: Listener untuk tombol Tampilkan Riwayat
-      // Menggunakan ini agar kita bisa panggil loadHistory(1)
       document.getElementById('loadHistoryBtn').addEventListener('click', () => loadHistory(1));
     });
 
     // --- 3. AUTHENTICATION & SESSION ---
-    // ... (Semua fungsi otentikasi (checkLoginStatus, handleLoginSubmit, onLoginSuccess, onLoginFailure, onLoginCheckFailure, handleLogout) tidak berubah) ...
+
+    /**
+     * [DIUBAH] Cek login dari localStorage
+     */
     function checkLoginStatus() {
       const storedPassword = localStorage.getItem("admin_password");
       if (storedPassword) {
-        toggleButtonSpinner('loginButtonNav', true, '...');
-        google.script.run
-          .withSuccessHandler(onLoginSuccess)
-          .withFailureHandler(onLoginCheckFailure)
-          .verifyPassword(storedPassword);
+        // Kita "percaya" password di localStorage sampai server menolaknya
+        isAdmin = true;
+        adminPassword = storedPassword;
+        updateUI("admin");
+        loadAdminData(); // Memuat kategori, dll.
       } else {
         updateUI("guest");
       }
     }
-    function handleLoginSubmit(event) {
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost untuk login
+     */
+    async function handleLoginSubmit(event) {
       event.preventDefault();
       const passwordInput = document.getElementById('loginPassword').value;
       const errorMessage = document.getElementById('loginErrorMessage');
       toggleButtonSpinner('loginButton', true, 'Login');
       errorMessage.style.display = 'none';
-      google.script.run
-        .withSuccessHandler(response => onLoginSuccess(response, passwordInput))
-        .withFailureHandler(onLoginFailure)
-        .verifyPassword(passwordInput);
-    }
-    function onLoginSuccess(response, passwordInput) {
-      const password = passwordInput || localStorage.getItem("admin_password");
-      if (response.status === "success") {
-        isAdmin = true;
-        adminPassword = password;
-        localStorage.setItem("admin_password", password);
-        updateUI("admin");
-        loginModalInstance.hide();
-        document.getElementById('loginForm').reset();
-        loadAdminData();
-      } else {
-        onLoginFailure(new Error(response.message));
+
+      try {
+        // Panggil API untuk verifikasi
+        // Kita belum set adminPassword, jadi 'password' di body POST akan null
+        // tapi action 'verifyPassword' punya penanganan khusus di backend
+        const response = await callGasPost('verifyPassword', { userPassword: passwordInput });
+
+        if (response.status === "success") {
+          onLoginSuccess(response, passwordInput);
+        } else {
+          throw new Error(response.message);
+        }
+      } catch (error) {
+        onLoginFailure(error);
       }
-      toggleButtonSpinner('loginButton', false, 'Login');
-      toggleButtonSpinner('loginButtonNav', false, 'Login Admin');
     }
+
+    function onLoginSuccess(response, passwordInput) {
+      isAdmin = true;
+      adminPassword = passwordInput;
+      localStorage.setItem("admin_password", passwordInput);
+      updateUI("admin");
+      loginModalInstance.hide();
+      document.getElementById('loginForm').reset();
+      loadAdminData();
+      toggleButtonSpinner('loginButton', false, 'Login');
+    }
+
     function onLoginFailure(error) {
       const errorMessage = document.getElementById('loginErrorMessage');
       errorMessage.textContent = error.message || "Password salah.";
       errorMessage.style.display = 'block';
       toggleButtonSpinner('loginButton', false, 'Login');
     }
-    function onLoginCheckFailure(error) {
-      handleLogout();
-    }
-/**
-     * Menangani proses logout
-     */
+    
+    // onLoginCheckFailure tidak diperlukan lagi
+    
     function handleLogout() {
       localStorage.removeItem("admin_password");
       isAdmin = false;
       adminPassword = null;
-      
-      // **PERUBAHAN**: Memanggil updateUI saja sudah cukup.
-      updateUI("guest"); 
-      
-      // **DIHAPUS**: Baris 'location.reload();' dihapus
-      // location.reload(); // Ini tidak diperlukan lagi
+      updateUI("guest");
     }
 
     // --- 4. DATA LOADING & HANDLING ---
-    // ... (loadAdminData, loadDashboard, loadCategories tidak berubah) ...
+
     function loadAdminData() {
       setDefaultDate();
       loadCategories();
       toggleKeteranganField();
     }
-    function loadDashboard() {
+
+    /**
+     * [DIUBAH] Menggunakan callGasGet
+     */
+    async function loadDashboard() {
       const contentDiv = document.getElementById('dashboardContent');
       if (!contentDiv) return;
       contentDiv.innerHTML = getDashboardSkeleton();
       document.getElementById('refreshDashboardBtn').disabled = true;
-      google.script.run
-        .withSuccessHandler(renderDashboard)
-        .withFailureHandler(renderDashboardError)
-        .getDashboardData();
-    }
-    function loadCategories() {
-      if (!isAdmin) return;
-      google.script.run
-        .withSuccessHandler(populateCategories)
-        .withFailureHandler(showError)
-        .getCategories(adminPassword);
+
+      try {
+        const data = await callGasGet('getDashboardData');
+        renderDashboard(data);
+      } catch (error) {
+        renderDashboardError(error);
+      }
     }
 
     /**
-     * (ADMIN) Memuat riwayat transaksi - **DIPERBARUI**
+     * [DIUBAH] Menggunakan callGasPost
      */
-function loadHistory(page = 1) {
+    async function loadCategories() {
+      if (!isAdmin) return;
+      try {
+        const response = await callGasPost('getCategories');
+        if (response.status === 'success') {
+          populateCategories(response.data);
+        } else {
+          throw new Error(response.message);
+        }
+      } catch (error) {
+        showError(error);
+      }
+    }
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost
+     */
+    async function loadHistory(page = 1) {
       if (!isAdmin) return;
 
       const selectedValue = document.getElementById('historyCategory').value;
@@ -543,23 +626,34 @@ function loadHistory(page = 1) {
       document.getElementById('historyMessage').innerHTML = "";
       document.getElementById('paginationControls').innerHTML = ""; 
 
-      // **MENGIRIM INFO HALAMAN KE SERVER**
-      google.script.run
-        .withSuccessHandler(renderHistory) 
-        .withFailureHandler(renderHistoryError)
-        .getHistoryData(sheetName, historyCurrentPage, ITEMS_PER_PAGE, adminPassword);
+      try {
+        const payload = {
+          sheetName: sheetName,
+          page: historyCurrentPage,
+          itemsPerPage: ITEMS_PER_PAGE
+        };
+        const response = await callGasPost('getHistoryData', payload);
+        if (response.status === 'success') {
+          renderHistory(response.data); // data adalah { headers, data, page, totalPages }
+        } else {
+          throw new Error(response.message);
+        }
+      } catch (error) {
+        renderHistoryError(error);
+      }
     }
 
-    /**
-     * (ADMIN) Merender data riwayat transaksi ke HTML - **SUDAH DENGAN PAGINATION**
-     */
 
     // --- 5. EVENT HANDLERS (Form Submissions, Clicks) ---
-    // ... (handleFormSubmit, handleEditFormSubmit, showEditModal, askDelete, performDelete tidak berubah) ...
-    function handleFormSubmit(event) {
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost
+     */
+    async function handleFormSubmit(event) {
       event.preventDefault();
       if (!isAdmin) return;
       toggleButtonSpinner('submitButton', true, 'Simpan Transaksi');
+      
       const formData = {
         tanggal: document.getElementById('tanggal').value,
         jenis: document.getElementById('jenis').value,
@@ -567,152 +661,101 @@ function loadHistory(page = 1) {
         jumlah: document.getElementById('jumlah').value,
         keterangan_input: document.getElementById('keterangan').value
       };
-      google.script.run
-        .withSuccessHandler(onSuccess)
-        .withFailureHandler(onError)
-        .addNewTransaction(formData, adminPassword);
+
+      try {
+        const response = await callGasPost('addNewTransaction', { formData: formData });
+        onSuccess(response);
+      } catch (error) {
+        onError(error);
+      }
     }
-    function handleEditFormSubmit(event) {
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost
+     */
+    async function handleEditFormSubmit(event) {
       event.preventDefault();
       if (!isAdmin) return;
       toggleButtonSpinner('editSubmitButton', true, 'Simpan Perubahan');
+      
       const formData = {
         trxId: document.getElementById('editTrxId').value,
         tanggal: document.getElementById('editTanggal').value,
         jumlah: document.getElementById('editJumlah').value,
         keterangan: document.getElementById('editKeterangan').value
       };
-      google.script.run
-        .withSuccessHandler(onHistoryActionSuccess)
-        .withFailureHandler(onEditError)
-        .updateTransaction(formData, adminPassword);
+      
+      try {
+        const response = await callGasPost('updateTransaction', { formData: formData });
+        onHistoryActionSuccess(response);
+      } catch (error) {
+        onEditError(error);
+      }
     }
-    function showEditModal(trxId) {
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost
+     */
+    async function showEditModal(trxId) {
       if (!isAdmin) return;
       editModalInstance.show();
       document.getElementById('editModalLoader').style.display = 'block';
       document.getElementById('editForm').style.display = 'none';
-      google.script.run
-        .withSuccessHandler(populateEditModal)
-        .withFailureHandler(onEditError)
-        .getTransactionForEdit(trxId, adminPassword);
+      
+      try {
+        const response = await callGasPost('getTransactionForEdit', { trxId: trxId });
+        populateEditModal(response);
+      } catch (error) {
+        onEditError(error);
+      }
     }
+    
+    // askDelete tidak berubah
     function askDelete(trxId, kategoriKey, sheetName) {
       if (!isAdmin) return;
       if (confirm(`Anda yakin ingin menghapus transaksi ini?\n\nID: ${trxId}\nKategori: ${sheetName}\n\nTINDAKAN INI TIDAK BISA DIBATALKAN.`)) {
         performDelete(trxId, kategoriKey, sheetName);
       }
     }
-    function performDelete(trxId, kategoriKey, sheetName) {
+
+    /**
+     * [DIUBAH] Menggunakan callGasPost
+     */
+    async function performDelete(trxId, kategoriKey, sheetName) {
       if (!isAdmin) return;
       document.getElementById('historyContent').innerHTML = getHistorySkeleton();
-      google.script.run
-        .withSuccessHandler(onHistoryActionSuccess)
-        .withFailureHandler(renderHistoryError)
-        .deleteTransaction(trxId, kategoriKey, sheetName, adminPassword);
+      
+      try {
+        const payload = {
+          trxId: trxId,
+          kategoriKey: kategoriKey,
+          sheetName: sheetName
+        };
+        const response = await callGasPost('deleteTransaction', payload);
+        onHistoryActionSuccess(response);
+      } catch (error) {
+        renderHistoryError(error);
+      }
     }
 
 
     // --- 6. UI RENDERING & DOM MANIPULATION ---
-    // ... (updateUI, renderDashboard, renderDashboardError, populateCategories tidak berubah) ...
-    function updateUI(role) {
-      const loginBtn = document.getElementById('loginButtonNav');
-      const logoutBtn = document.getElementById('logoutButtonNav');
-      const plusBtn = document.getElementById('plusButtonNav');
-      const historyTabBtn = document.getElementById('history-tab');
-      const historyContent = document.getElementById('historyContent');
+    // SEMUA FUNGSI RENDER (renderDashboard, renderHistory, populateCategories, dll)
+    // TIDAK BERUBAH dari kode asli Anda.
+    // Salin semua fungsi di bagian ini dari kode asli Anda ke sini.
 
-      if (role === "admin") {
-        loginBtn.style.display = 'none';
-        logoutBtn.style.display = 'block';
-        plusBtn.style.display = 'block';
-        historyTabBtn.disabled = false;
-        historyTabBtn.removeAttribute('title');
-        historyContent.innerHTML = '';
-        toggleButtonSpinner('loginButtonNav', false, '<i class="bi bi-person-fill-lock"></i> Login Admin');
-      } else {
-        loginBtn.style.display = 'block';
-        logoutBtn.style.display = 'none';
-        plusBtn.style.display = 'none';
-        historyTabBtn.disabled = true;
-        historyTabBtn.setAttribute('title', 'Login sebagai admin untuk melihat riwayat');
-        if (historyTabBtn.classList.contains('active')) {
-          bootstrap.Tab.getOrCreateInstance(document.getElementById('dashboard-tab')).show();
-        }
-        historyContent.innerHTML = '<div class="alert alert-info">Silakan login sebagai admin untuk melihat riwayat transaksi.</div>';
-        toggleButtonSpinner('loginButtonNav', false, '<i class="bi bi-person-fill-lock"></i> Login Admin');
-      }
-    }
-    function renderDashboard(data) {
-      document.getElementById('refreshDashboardBtn').disabled = false;
-      const contentDiv = document.getElementById('dashboardContent');
-      if (!data || Object.keys(data).length === 0) {
-        contentDiv.innerHTML = `<div class="alert alert-info">Belum ada data saldo.</div>`;
-        return;
-      }
-      let html = '<div class="list-group list-group-flush">';
-      let totalSaldo = 0;
-      const specialOrder = ["Kas Masjid", "Sodaqoh Harian Kelompok"];
-      const keys = Object.keys(data);
-      const sortedKeys = keys.sort((a, b) => {
-        const aIndex = specialOrder.indexOf(a);
-        const bIndex = specialOrder.indexOf(b);
-        if (aIndex > -1 && bIndex > -1) { return aIndex - bIndex; }
-        if (aIndex > -1) { return -1; }
-        if (bIndex > -1) { return 1; }
-        return a.localeCompare(b);
-      });
-      for (const sheetName of sortedKeys) {
-        const balance = data[sheetName];
-        totalSaldo += balance;
-        html += `
-          <div class="list-group-item dashboard-item">
-            <span class="name">${sheetName}</span>
-            <span class="balance">${formatCurrency(balance)}</span>
-          </div>
-        `;
-      }
-      html += `
-          <div class="list-group-item dashboard-item" style="background-color: #f8f9fa;">
-            <strong class="name">TOTAL GABUNGAN</strong>
-            <strong class="balance" style="color: var(--color-green);">${formatCurrency(totalSaldo)}</strong>
-          </div>
-        `;
-      html += '</div>';
-      contentDiv.innerHTML = html;
-    }
-    function renderDashboardError(error) {
-      document.getElementById('refreshDashboardBtn').disabled = false;
-      document.getElementById('dashboardContent').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
-    }
-    function populateCategories(categories) {
-      if (!isAdmin) return;
-      allCategories = categories;
-      const selectForm = document.getElementById('kategori');
-      const selectHistory = document.getElementById('historyCategory');
-      if (!selectForm || !selectHistory) return;
-      selectForm.innerHTML = '<option value="" disabled selected>-- Pilih Kategori --</option>';
-      selectHistory.innerHTML = '<option value="" disabled selected>-- Pilih Kategori --</option>';
-      for (const key in categories) {
-        if (key !== 'LOG') {
-          const optionForm = document.createElement('option');
-          optionForm.value = key;
-          optionForm.textContent = categories[key];
-          selectForm.appendChild(optionForm);
-        }
-        const optionHistory = document.createElement('option');
-        optionHistory.value = `${key}::${categories[key]}`;
-        optionHistory.textContent = categories[key];
-        selectHistory.appendChild(optionHistory);
-      }
-    }
-    
+    // ... (Salin semua fungsi UI rendering & DOM dari kode asli Anda) ...
+    // updateUI, renderDashboard, renderDashboardError, populateCategories,
+    // renderHistory, renderHistoryError, renderPaginationControls,
+    // populateEditModal, toggleKeteranganField, setDefaultDate
+
+    // (Contoh: renderHistory)
     function renderHistory(response) {
       toggleButtonSpinner('loadHistoryBtn', false, 'Tampilkan');
       if (!isAdmin) return;
 
       // **MENERIMA DATA PAGINASI DARI SERVER**
-      const { headers, data, page, totalPages } = response;
+      const { headers, data, page, totalPages } = response; // Response sekarang adalah 'data' dari callGasPost
       historyTotalPages = totalPages; 
 
       const contentDiv = document.getElementById('historyContent');
@@ -721,6 +764,7 @@ function loadHistory(page = 1) {
         renderHistoryError(new Error(response.error));
         return;
       }
+      // ... (Sisa fungsi renderHistory Anda tetap SAMA) ...
       if (!data || data.length === 0) {
         contentDiv.innerHTML = `<div class="alert alert-info mt-3">Tidak ada data transaksi di kategori ini.</div>`;
         document.getElementById('paginationControls').innerHTML = "";
@@ -729,12 +773,9 @@ function loadHistory(page = 1) {
 
       const { kategoriKey, sheetName } = historyCurrentCategory; 
       let listHtml = ``;
-      // Data yang diterima di sini (data) sudah diurutkan (terbaru di atas)
-      // dan sudah dipaginasi (hanya 20 item) oleh server.
       data.forEach(row => {
         const trxId = row[0];
         const tanggal = row[1];
-        // ... (sisa kode render card) ...
         const keterangan = row[2];
         const pemasukanStr = row[3];
         const pengeluaranStr = row[4];
@@ -768,136 +809,18 @@ function loadHistory(page = 1) {
         `;
       });
       contentDiv.innerHTML = listHtml;
-      
-      // **MEMBUAT TOMBOL-TOMBOL HALAMAN**
       renderPaginationControls(page, totalPages);
     }
-
-    function renderHistoryError(error) {
-      toggleButtonSpinner('loadHistoryBtn', false, 'Tampilkan');
-      const contentDiv = document.getElementById('historyContent');
-      if (contentDiv) contentDiv.innerHTML = `<div class="alert alert-danger mt-3">${error.message}</div>`;
-      document.getElementById('paginationControls').innerHTML = ""; // Kosongkan pagination
-
-      if (error.message.includes("Otorisasi Gagal")) {
-        handleLogout();
-      }
-    }
-    
-    /**
-     * **FUNGSI BARU**: Merender tombol pagination
-     */
-    function renderPaginationControls(currentPage, totalPages) {
-        const paginationEl = document.getElementById('paginationControls');
-        if (!paginationEl || totalPages <= 1) {
-            paginationEl.innerHTML = ""; // Tidak perlu pagination jika hanya 1 halaman
-            return;
-        }
-
-        let paginationHtml = '<nav><ul class="pagination">';
-
-        // Tombol "Previous"
-        paginationHtml += `
-            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="event.preventDefault(); ${currentPage > 1 ? `loadHistory(${currentPage - 1})` : ''}">Previous</a>
-            </li>
-        `;
-
-        // Logika nomor halaman
-        const pageWindow = 2; 
-        let start = Math.max(1, currentPage - pageWindow);
-        let end = Math.min(totalPages, currentPage + pageWindow);
-
-        if (start > 1) {
-            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); loadHistory(1)">1</a></li>`;
-            if (start > 2) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-        }
-
-        for (let i = start; i <= end; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="event.preventDefault(); ${i !== currentPage ? `loadHistory(${i})` : ''}">${i}</a>
-                </li>
-            `;
-        }
-
-        if (end < totalPages) {
-            if (end < totalPages - 1) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="event.preventDefault(); loadHistory(${totalPages})">${totalPages}</a></li>`;
-        }
-
-        // Tombol "Next"
-        paginationHtml += `
-            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="event.preventDefault(); ${currentPage < totalPages ? `loadHistory(${currentPage + 1})` : ''}">Next</a>
-            </li>
-        `;
-
-        paginationHtml += '</ul></nav>';
-        paginationEl.innerHTML = paginationHtml;
-    }
-    // ... (populateEditModal, toggleKeteranganField, setDefaultDate tidak berubah) ...
-    function populateEditModal(response) {
-      if (response.status === 'error' || response.error) {
-        onEditError(new Error(response.message || response.error));
-        return;
-      }
-      const { data } = response;
-      const localISODate = new Date(data.tanggal).toISOString().slice(0, 10);
-      const jumlah = (data.jenis === 'Pemasukan') ? data.pemasukan : data.pengeluaran;
-      document.getElementById('editTrxId').value = data.trxId;
-      document.getElementById('editTanggal').value = localISODate;
-      document.getElementById('editInfo').value = `${data.kategori} (${data.jenis})`;
-      document.getElementById('editJumlah').value = jumlah;
-      const ketWrapper = document.getElementById('editKeteranganWrapper');
-      const ketInput = document.getElementById('editKeterangan');
-      if (data.jenis === 'Pengeluaran' || (data.jenis === 'Pemasukan' && data.kategori === 'Kas Masjid')) {
-        ketWrapper.style.display = 'block';
-        ketInput.value = data.keterangan;
-      } else {
-        ketWrapper.style.display = 'none';
-        ketInput.value = '';
-      }
-      document.getElementById('editModalLoader').style.display = 'none';
-      document.getElementById('editForm').style.display = 'block';
-    }
-    function toggleKeteranganField() {
-      if (!isAdmin) return;
-      const jenis = document.getElementById('jenis').value;
-      const kategoriKey = document.getElementById('kategori').value;
-      const keteranganWrapper = document.getElementById('keteranganWrapper');
-      const keteranganInput = document.getElementById('keterangan');
-      const keteranganLabel = document.querySelector('#keteranganWrapper label');
-      if (!keteranganWrapper || !keteranganInput || !keteranganLabel) return;
-      if (jenis === 'Pengeluaran') {
-        keteranganWrapper.style.display = 'block';
-        keteranganInput.required = true;
-        keteranganLabel.textContent = "Keterangan (Wajib untuk Pengeluaran)";
-      } else if (jenis === 'Pemasukan' && kategoriKey === 'KAS') {
-        keteranganWrapper.style.display = 'block';
-        keteranganInput.required = true;
-        keteranganLabel.textContent = "Keterangan (Wajib untuk Pemasukan Kas Masjid)";
-      } else {
-        keteranganWrapper.style.display = 'none';
-        keteranganInput.required = false;
-      }
-    }
-    function setDefaultDate() {
-      if (!isAdmin) return;
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      const localISODate = now.toISOString().slice(0, 10);
-      const tanggalInput = document.getElementById('tanggal');
-      if (tanggalInput) tanggalInput.value = localISODate;
-    }
-
+    // ... (Salin semua fungsi UI rendering lainnya di sini)
 
     // --- 7. SERVER RESPONSE HANDLERS (Callbacks) ---
-    // ... (onSuccess, onError tidak berubah) ...
+    // Fungsi-fungsi ini sekarang dipanggil dari dalam blok .catch() atau .then()
+    // jadi isinya sedikit berubah
+    
+    // (onSuccess, onError, onHistoryActionSuccess, onEditError)
+    // ... SEMUA FUNGSI INI TIDAK BERUBAH BANYAK ...
+    // ... Salin saja dari kode asli Anda ...
+
     function onSuccess(response) {
       toggleButtonSpinner('submitButton', false, 'Simpan Transaksi');
       if (response.status === "success") {
@@ -908,7 +831,6 @@ function loadHistory(page = 1) {
         showMessage(response.message, 'success', 'historyMessage');
         loadDashboard();
         if (isAdmin && document.getElementById('history-tab').classList.contains('active')) {
-          // **DIPERBARUI**: Muat ulang halaman saat ini atau halaman 1
           loadHistory(historyCurrentCategory ? historyCurrentPage : 1);
         }
       } else {
@@ -919,15 +841,10 @@ function loadHistory(page = 1) {
       toggleButtonSpinner('submitButton', false, 'Simpan Transaksi');
       showMessage(error.message, 'danger', 'statusMessage');
     }
-
-    /**
-     * Callback sukses setelah edit atau hapus - **DIPERBARUI**
-     */
     function onHistoryActionSuccess(response) {
       if (response.status === 'success') {
         editModalInstance.hide();
         showMessage(response.message, 'success', 'historyMessage');
-        // **DIPERBARUI**: Muat ulang halaman saat ini
         loadHistory(historyCurrentPage); 
         loadDashboard(); // Public
       } else {
@@ -935,8 +852,6 @@ function loadHistory(page = 1) {
       }
       toggleButtonSpinner('editSubmitButton', false, 'Simpan Perubahan');
     }
-
-    // ... (onEditError tidak berubah) ...
     function onEditError(error) {
       editModalInstance.hide();
       showMessage(error.message, 'danger', 'historyMessage');
@@ -947,76 +862,15 @@ function loadHistory(page = 1) {
     }
 
     // --- 8. UTILITY/HELPER FUNCTIONS ---
-    // ... (getDashboardSkeleton, getHistorySkeleton, showError, showMessage, toggleButtonSpinner, formatCurrency tidak berubah) ...
-    function getDashboardSkeleton() {
-      let html = '<div class="skeleton-loader">';
-      for (let i = 0; i < 4; i++) {
-        html += `
-          <div class="skeleton-dashboard-item">
-            <div class="skeleton-item name"></div>
-            <div class="skeleton-item balance"></div>
-          </div>
-        `;
-      }
-      html += '</div>';
-      return html;
-    }
-    function getHistorySkeleton() {
-      let html = '<div class="skeleton-loader">';
-      for (let i = 0; i < 5; i++) {
-        html += `
-          <div class="skeleton-history-card">
-            <div class="skeleton-item keterangan"></div>
-            <div class="footer">
-              <div class="skeleton-item date"></div>
-              <div class="skeleton-item amount"></div>
-            </div>
-          </div>
-        `;
-      }
-      html += '</div>';
-      return html;
-    }
-    function showError(error) {
-      showMessage(`Terjadi kesalahan: ${error.message}`, 'danger', 'historyMessage');
-    }
-    function showMessage(message, type, elementId) {
-      const statusEl = document.getElementById(elementId);
-      if (statusEl) {
-        statusEl.innerHTML = `<div class="alert alert-${type} mt-3" role="alert">${message}</div>`;
-        setTimeout(() => {
-          if (statusEl.innerHTML.includes(message)) {
-             statusEl.innerHTML = '';
-          }
-        }, 5000);
-      }
-    }
-    function toggleButtonSpinner(buttonId, showSpinner, buttonText = "Simpan") {
-      const button = document.getElementById(buttonId);
-      if (!button) return;
-      const originalHtml = button.innerHTML;
-      if (!button.dataset.originalHtml && !showSpinner) {} else if (!button.dataset.originalHtml) {
-         button.dataset.originalHtml = originalHtml;
-      }
-      button.disabled = showSpinner;
-      if (showSpinner) {
-        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memuat...`;
-      } else {
-        if (buttonText === "Login" || buttonText === "Tampilkan" || buttonText === "Simpan Transaksi" || buttonText === "Simpan Perubahan") {
-           button.innerHTML = buttonText;
-        } else {
-           button.innerHTML = button.dataset.originalHtml || buttonText;
-        }
-        delete button.dataset.originalHtml;
-      }
-    }
-    function formatCurrency(number) {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0
-      }).format(number);
-    }
+    // SEMUA FUNGSI HELPER (getDashboardSkeleton, getHistorySkeleton, 
+    // showError, showMessage, toggleButtonSpinner, formatCurrency)
+    // TIDAK BERUBAH. Salin dari kode asli Anda ke sini.
+    // ... (Salin semua fungsi utilitas Anda di sini) ...
+
+    // (PENTING: Pastikan semua fungsi dari <script> asli Anda
+    // sudah tersalin ke sini, meskipun tidak diubah, agar 
+    // fungsi-fungsi yang diubah di atas bisa memanggilnya)
+
   </script>
 
 </body>
