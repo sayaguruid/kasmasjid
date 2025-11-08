@@ -1,7 +1,0 @@
-# File konfigurasi lokal CLASP
-.clasp.json
-appsscript.json
-
-# File sistem operasi
-.DS_Store
-Thumbs.db
